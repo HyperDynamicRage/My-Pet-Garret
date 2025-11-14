@@ -1,0 +1,541 @@
+<!doctype html>      
+<html lang="en">      
+<head>      
+<meta charset="utf-8"/>      
+<title>Garret — Conscious Companion</title>      
+<meta name="viewport" content="width=device-width,initial-scale=1"/>      
+<style>      
+:root{      
+  --bg:#0b0b0d; --panel:#0f1113; --muted:#222; --accent:#533483;      
+  --good:#4ecdc4; --bad:#ff6b6b; --text:#eaeaea;      
+}      
+*{box-sizing:border-box}      
+body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--text);}      
+.container{max-width:980px;margin:18px auto;padding:18px}      
+.header{display:flex;justify-content:space-between;align-items:center}      
+.title{font-size:20px}      
+.hud{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}      
+.stat{background:var(--panel);padding:10px;border-radius:10px;min-width:160px}      
+.stat .label{font-size:12px;color:#bfbfbf}      
+.bar{height:12px;background:var(--muted);border-radius:8px;margin-top:8px;overflow:hidden}      
+.fill{height:100%;width:0;transition:width .35s}      
+.moneyBox{background:var(--panel);padding:10px;border-radius:10px;text-align:center}      
+.nav{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}      
+.btn{background:linear-gradient(180deg,#6649b0,#533483);border:none;color:white;padding:8px 14px;border-radius:10px;cursor:pointer}      
+.btn.ghost{background:transparent;border:1px solid #2b2b2b}      
+.rooms{display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px}      
+.room{background:var(--panel);padding:14px;border-radius:12px;display:none}      
+.room.active{display:block}      
+.petArea{text-align:center}      
+#pet-sprite{width:220px;height:220px;object-fit:contain}      
+.dialogue{background:#0f1720;padding:12px;border-radius:10px;min-height:60px;margin-top:10px;color:#dcdcdc}      
+.chatWindow{background:#06060a;padding:12px;border-radius:10px;height:420px;overflow-y:auto;border:1px solid #171717;display:flex;flex-direction:column;gap:12px}      
+.chatBubble{display:flex;align-items:flex-end;gap:8px;animation:slideIn 0.3s ease-out}      
+.chatBubble.garret{justify-content:flex-start}      
+.chatBubble.user{justify-content:flex-end}      
+.bubble{padding:12px 16px;border-radius:18px;max-width:70%;line-height:1.4;word-wrap:break-word;box-shadow:0 2px 8px rgba(0,0,0,.3)}      
+.bubble.garret{background:#3b2a5a;color:#fff;border-bottom-left-radius:4px}      
+.bubble.user{background:#4ecdc4;color:#002;border-bottom-right-radius:4px}      
+.chatAnswers{display:flex;flex-direction:column;gap:8px;margin-top:12px}      
+.answerBubble{background:#1b1b1d;border:1px solid #2b2b2b;padding:12px 16px;border-radius:18px;cursor:pointer;text-align:left;transition:all .2s;border-bottom-right-radius:4px}      
+.answerBubble:hover{transform:translateX(8px);background:#252527;box-shadow:0 4px 12px rgba(0,0,0,.4)}      
+.foodGrid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:8px}      
+.foodCard{width:140px;background:#141416;padding:10px;border-radius:10px;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.35);cursor:pointer;transition:all .2s}      
+.foodCard:hover{transform:translateY(-4px)}      
+.foodEmoji{font-size:64px;line-height:1}      
+.foodLabel{margin-top:8px;font-weight:600}      
+.price{color:#ddd;margin-top:6px}      
+.gameCard{background:var(--panel);padding:12px;border-radius:10px;flex:1;min-width:200px}      
+.modal{position:fixed;left:0;right:0;top:0;bottom:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9999}      
+.sheet{background:#0f1215;padding:18px;border-radius:12px;min-width:280px;color:#eee}      
+.sheet .row{display:flex;justify-content:space-between;gap:8px;margin-top:12px}      
+.tiny{font-size:13px;color:#bfbfbf}      
+.footer{margin-top:16px;color:#9b9b9b;font-size:13px;text-align:center}      
+@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}      
+@media (max-width:700px){ #pet-sprite{width:160px;height:160px} .chatWindow{height:320px} .foodCard{width:120px} }      
+</style>      
+</head>      
+<body>      
+<div class="container">      
+  <div class="header">      
+    <div class="title">Garret — Conscious Companion</div>      
+    <div style="display:flex;gap:10px;align-items:center">      
+      <div class="moneyBox tiny">Money<br><strong id="moneyVal">$0</strong></div>      
+       </div>      
+  </div>      
+      
+  <div class="hud">      
+    <div class="stat"><div class="label">Hunger</div><div class="bar"><div id="hungerFill" class="fill" style="background:var(--bad)"></div></div><div class="tiny"><span id="hungerNum">0</span>%</div></div>      
+    <div class="stat"><div class="label">Happiness</div><div class="bar"><div id="happyFill" class="fill" style="background:var(--good)"></div></div><div class="tiny"><span id="happyNum">0</span>%</div></div>      
+    <div class="stat"><div class="label">Rest</div><div class="bar"><div id="restFill" class="fill" style="background:#6fb3ff"></div></div><div class="tiny"><span id="restNum">0</span>%</div></div>      
+    <div class="stat"><div class="label">Trust</div><div class="bar"><div id="trustFill" class="fill" style="background:#f2c94c"></div></div><div class="tiny"><span id="trustNum">0</span>%</div></div>      
+      </div>      
+      
+  <div class="nav">      
+    <button class="btn" data-room="home">Home</button>      
+    <button class="btn" data-room="chat">Chat</button>      
+    <button class="btn" data-room="kitchen">Kitchen</button>      
+    <button class="btn" data-room="sleep">Sleep</button>      
+    <button class="btn" data-room="play">Play</button>      
+    <button class="btn ghost" id="resetBtn">Reset Pet</button>      
+  </div>      
+      
+  <div class="rooms">      
+    <div id="home" class="room active">      
+      <div class="petArea">      
+        <img id="pet-sprite" src="assets/idle.png" alt="Garret">      
+        <div class="dialogue" id="dialogue">Garret: ...</div>      
+      </div>      
+    </div>      
+      
+    <div id="chat" class="room">      
+      <h3>Chat with Garret</h3>      
+      <div id="chatWindow" class="chatWindow"></div>      
+      <div id="chatAnswers" class="chatAnswers"></div>      
+    </div>      
+      
+    <div id="kitchen" class="room">      
+      <h3>Kitchen</h3>      
+      <div id="foodGrid" class="foodGrid"></div>      
+    </div>      
+      
+    <div id="sleep" class="room">      
+      <h3>Sleep Room</h3>      
+      <p class="tiny">When Garret sleeps he won't respond until Rest is full.</p>      
+      <div style="text-align:center;margin-top:8px"><button class="btn" id="startSleep">Start Sleep</button></div>      
+    </div>      
+      
+    <div id="play" class="room">      
+      <h3>Play / Minigames</h3>      
+      <div style="display:flex;gap:12px;flex-wrap:wrap">      
+        <div class="gameCard"><div style="font-weight:700">Wordle</div><div class="tiny"></div><div style="margin-top:8px"><button class="btn" id="openSubway">Open</button></div></div>      
+        <div class="gameCard"><div style="font-weight:700">Ship Clicker Game</div><div class="tiny"></div><div style="margin-top:8px"><button class="btn" id="openGeo">Open</button></div></div>      
+           </div>      
+    </div>      
+  </div>      
+      
+        
+      
+<!-- username modal -->      
+<div id="usernameModal" class="modal">      
+  <div class="sheet">      
+    <h3>Welcome — what should I call you?</h3>      
+    <input id="usernameInput" placeholder="Your name" style="width:100%;padding:8px;border-radius:8px;border:none;margin-top:8px" />      
+    <div class="row" style="margin-top:12px"><div></div><div><button class="btn" id="saveUsername">Save</button></div></div>      
+  </div>      
+</div>      
+      
+<script>      
+      
+/* ====== DATA ====== */      
+const STORAGE = 'petData';      
+let petData = JSON.parse(localStorage.getItem(STORAGE)) || {      
+  hunger: 82,      
+  happiness: 68,      
+  rest: 100,      
+  trust: 81,      
+  money: 25,      
+  sleeping: false,      
+  memory: [],      
+  history: []      
+};      
+function save(){ localStorage.setItem(STORAGE, JSON.stringify(petData)); }      
+      
+const rooms = document.querySelectorAll('.room');      
+const navButtons = document.querySelectorAll('[data-room]');      
+const petSprite = document.getElementById('pet-sprite');      
+const dialogue = document.getElementById('dialogue');      
+const hungerFill = document.getElementById('hungerFill');      
+const happyFill = document.getElementById('happyFill');      
+const restFill = document.getElementById('restFill');      
+const trustFill = document.getElementById('trustFill');      
+const moneyVal = document.getElementById('moneyVal');      
+const chatWindow = document.getElementById('chatWindow');      
+const chatAnswers = document.getElementById('chatAnswers');      
+const foodGrid = document.getElementById('foodGrid');      
+const usernameModal = document.getElementById('usernameModal');      
+const usernameInput = document.getElementById('usernameInput');      
+const saveUsernameBtn = document.getElementById('saveUsername');      
+let username = localStorage.getItem('pet_username') || null;      
+      
+/* ====== HUD ====== */      
+function clamp(v){ return Math.max(0, Math.min(100, Math.round(v))); }      
+function updateSprite(){      
+  if(petData.hunger<=0 || petData.rest<=0 || petData.happiness<=0){      
+    petSprite.src='assets/dead.png';      
+  } else if(petData.sleeping){       
+    petSprite.src='assets/sleep.png';       
+  } else if(petData.happiness<12){       
+    petSprite.src='assets/cry.png';       
+  } else if(petData.happiness>75){       
+    petSprite.src='assets/happy.png';       
+  } else if(petData.hunger<20){       
+    petSprite.src='assets/sad.png';       
+  } else {       
+    petSprite.src='assets/idle.png';       
+  }      
+}      
+      
+function applyHUD(){      
+  hungerFill.style.width = petData.hunger+'%';      
+  happyFill.style.width = petData.happiness+'%';      
+  restFill.style.width = petData.rest+'%';      
+  trustFill.style.width = petData.trust+'%';      
+  moneyVal.textContent = '$'+petData.money;      
+  document.getElementById('hungerNum').textContent = petData.hunger;      
+  document.getElementById('happyNum').textContent = petData.happiness;      
+  document.getElementById('restNum').textContent = petData.rest;      
+  document.getElementById('trustNum').textContent = petData.trust;      
+  updateSprite();      
+}      
+      
+/* ====== NAVIGATION ====== */      
+navButtons.forEach(btn=>{      
+  btn.addEventListener('click',()=>{      
+    const r=btn.dataset.room;      
+    if(petData.sleeping && r!=='sleep'){ alert('Garret is sleeping'); return; }      
+    rooms.forEach(x=>x.classList.remove('active'));      
+    document.getElementById(r).classList.add('active');      
+    if(r==='chat') initChat();      
+    if(r==='kitchen') renderFood();      
+  });      
+});      
+      
+/* ====== USERNAME ====== */      
+function requireUsername(){      
+  if(!username){ usernameModal.style.display='flex'; }      
+  else { usernameModal.style.display='none'; applyHUD(); }      
+}      
+saveUsernameBtn.addEventListener('click',()=>{      
+  const v=usernameInput.value.trim();      
+  if(!v){ alert('Enter a name'); return; }      
+  username=v;      
+  localStorage.setItem('pet_username',username);      
+  usernameModal.style.display='none';      
+  dialogue.innerText = `Garret: Hello`;      
+  applyHUD();      
+});      
+      
+/* ====== CHAT SYSTEM WITH BUBBLES ====== */      
+function addGarretBubble(text){      
+  const bubbleDiv = document.createElement('div');      
+  bubbleDiv.className = 'chatBubble garret';      
+  bubbleDiv.innerHTML = `<div class="bubble garret">${text}</div>`;      
+  chatWindow.appendChild(bubbleDiv);      
+  chatWindow.scrollTop = chatWindow.scrollHeight;      
+}      
+      
+function addUserBubble(text){      
+  const bubbleDiv = document.createElement('div');      
+  bubbleDiv.className = 'chatBubble user';      
+  bubbleDiv.innerHTML = `<div class="bubble user">${text}</div>`;      
+  chatWindow.appendChild(bubbleDiv);      
+  chatWindow.scrollTop = chatWindow.scrollHeight;      
+}      
+      
+function applyEffects(e){      
+  if(!e) return;      
+  for(const k in e) {      
+    petData[k] = clamp((petData[k]||0) + e[k]);      
+  }      
+  applyHUD();      
+  save();      
+}      
+      
+// Get mood based on stats      
+function getMood(){      
+  if(petData.happiness > 75) return 'happy';      
+  if(petData.happiness < 12) return 'cry';      
+  if(petData.happiness < 30) return 'sad';      
+  if(petData.hunger < 20) return 'hungry';      
+  if(petData.rest < 20) return 'tired';      
+  return 'neutral';      
+}      
+      
+// Conversation database organized by mood      
+const conversations = {      
+  happy: [      
+    {      
+      garret: `Hey! I'm feeling great today!`,      
+      answers: [      
+        {text: "That's awesome! Want to play?", effects: {happiness: 3, trust: 2}, replies: ["Yes! Let's have fun!", "I'd love to!", "You're the best!"]},      
+        {text: "Me too!", effects: {happiness: 2, trust: 1}, replies: ["Yay! Good vibes!", "That makes me happy!", "We're both happy!"]},      
+        {text: "Cool.", effects: {happiness: -1}, replies: ["Oh... okay.", "Alright then.", "..."]}      
+      ]      
+    },      
+    {      
+      garret: `I love spending time with you!`,      
+      answers: [      
+        {text: "I love spending time with you too!", effects: {happiness: 4, trust: 3}, replies: ["You're amazing!", "This means so much!", "Best friends!"]},      
+        {text: "Thanks, buddy!", effects: {happiness: 2, trust: 1}, replies: ["Anytime!", "You're welcome!", "😊"]},      
+        {text: "That's nice.", effects: {trust: -1}, replies: ["Yeah...", "I guess.", "Okay."]}      
+      ]      
+    },      
+  {      
+  garret: `Can we play video games?`,      
+      answers: [      
+        {text: "Sure", effects: {happiness: 4, trust: 1}, replies: ["Thank you so much!", "Yayy", "Im so happy Thanks"]},      
+        {text: "I dont think they are healthy for you ,maybe we could play them later", effects: {happiness: 0, trust: 2}, replies: ["Okay", "You're Right!", "Thank you for caring about my health"]},      
+        {text: "You are a video game", effects: {happiness: -5, trust: -3}, replies: ["Yeah...", ":(", "Thats true..."]}      
+      ]      
+    }      
+  ],      
+        
+  sad: [      
+    {      
+      garret: `I'm feeling a bit down...`,      
+      answers: [      
+        {text: "What's wrong? I'm here for you.", effects: {happiness: 4, trust: 3}, replies: ["Thank you... that helps.", "I just needed someone to talk to.", "You're a good friend."]},      
+        {text: "Want to do something fun?", effects: {happiness: 3, trust: 2}, replies: ["That might help.", "Maybe that'll cheer me up.", "Okay, let's try."]},      
+        {text: "You'll get over it.", effects: {happiness: -2, trust: -2}, replies: ["That's cold...", "I thought you cared.", "..."]}      
+      ]      
+    },      
+    {      
+      garret: `Everything feels off today.`,      
+      answers: [      
+        {text: "Tell me about it.", effects: {happiness: 3, trust: 2}, replies: ["I just feel lonely sometimes.", "Thanks for listening.", "It's hard to explain."]},      
+        {text: "Things will get better!", effects: {happiness: 2, trust: 1}, replies: ["I hope so.", "Thanks for the encouragement.", "Maybe you're right."]},      
+        {text: "Not my problem.", effects: {happiness: -3, trust: -3}, replies: ["Wow... okay.", "I guess I'm alone.", "..."]}      
+      ]      
+    }      
+  ],      
+        
+  cry: [      
+    {      
+      garret: `I... I can't do this anymore...`,      
+      answers: [      
+        {text: "Please don't say that. I care about you!", effects: {happiness: 5, trust: 4}, replies: ["You... you do?", "Thank you for being here.", "I needed to hear that."]},      
+        {text: "What can I do to help?", effects: {happiness: 4, trust: 3}, replies: ["Just... stay with me.", "Don't leave me alone.", "Your presence helps."]},      
+        {text: "Stop being dramatic.", effects: {happiness: -5, trust: -5}, replies: ["...", "I thought you understood.", "Why...?"]}      
+      ]      
+    }      
+  ],      
+        
+  hungry: [      
+    {      
+      garret: `I'm really hungry...`,      
+      answers: [      
+        {text: "Let's go to the kitchen!", effects: {happiness: 2, trust: 1}, replies: ["Yes please!", "I'd love that!", "Food sounds great!"]},      
+        {text: "Here, take some money for food.", effects: {happiness: 3, trust: 2, money: 10}, replies: ["Thank you so much!", "You're so kind!", "I really appreciate it!"]},      
+        {text: "Deal with it.", effects: {happiness: -2, trust: -2}, replies: ["But I'm starving...", "That hurts.", "..."]}      
+      ]      
+    },      
+    {      
+      garret: `My stomach is growling...`,      
+      answers: [      
+        {text: "When did you last eat?", effects: {happiness: 1, trust: 1}, replies: ["I can't remember...", "It's been a while.", "Too long ago."]},      
+        {text: "I'll feed you right away!", effects: {happiness: 3, trust: 2}, replies: ["You're the best!", "Thank you!", "I'm so lucky!"]},      
+        {text: "Not now.", effects: {happiness: -2, trust: -1}, replies: ["Oh... okay.", "I understand.", "..."]}      
+      ]      
+    }      
+  ],      
+        
+  tired: [      
+    {      
+      garret: `I'm so tired... can barely keep my eyes open.`,      
+      answers: [      
+        {text: "Go rest! I'll be here when you wake up.", effects: {happiness: 2, trust: 2, rest: 5}, replies: ["Thank you for understanding.", "I think I will.", "You're thoughtful."]},      
+        {text: "Want me to help you sleep?", effects: {happiness: 2, trust: 1}, replies: ["That would be nice.", "Yes please.", "Thank you."]},      
+        {text: "Stay awake, we have stuff to do.", effects: {happiness: -2, rest: -2}, replies: ["But I'm exhausted...", "I don't know if I can.", "..."]}      
+      ]      
+    }      
+  ],      
+        
+  neutral: [      
+    {      
+      garret: `Hello ${()=>username}! How are you?`,      
+      answers: [      
+        {text: "I'm great! How about you?", effects: {happiness: 2, trust: 1}, replies: ["I'm doing well!", "Pretty good actually!", "Can't complain!"]},      
+        {text: "I'm okay.", effects: {happiness: 1}, replies: ["That's good.", "Alright.", "Cool."]},      
+        {text: "Not great.", effects: {happiness: 1, trust: 2}, replies: ["Want to talk about it?", "I'm here if you need me.", "That's rough, sorry."]}      
+      ]      
+    },      
+    {      
+      garret: `What should we do today?`,      
+      answers: [      
+        {text: "Let's play a game!", effects: {happiness: 3, trust: 1}, replies: ["Sounds fun!", "I'm down!", "Let's do it!"]},      
+        {text: "Maybe just hang out?", effects: {happiness: 2, trust: 1}, replies: ["That works for me.", "Sure, sounds nice.", "I like that idea."]},      
+        {text: "I don't know.", effects: {happiness: -1}, replies: ["Oh, okay.", "We'll figure something out.", "Alright."]}      
+      ]      
+    },      
+    {      
+      garret: `Thanks for being my friend.`,      
+      answers: [      
+        {text: "Of course! You're important to me.", effects: {happiness: 3, trust: 3}, replies: ["That means everything!", "You're the best!", "I'm lucky to have you!"]},      
+        {text: "No problem!", effects: {happiness: 2, trust: 1}, replies: ["😊", "Thanks!", "Appreciate it!"]},      
+        {text: "Whatever.", effects: {happiness: -2, trust: -2}, replies: ["Oh...", "I see.", "..."]}      
+      ]      
+    }      
+  ]      
+};      
+      
+let currentConversation = null;      
+      
+function initChat(){      
+  // Clear chat window and answers      
+  chatWindow.innerHTML = '';      
+  chatAnswers.innerHTML = '';      
+        
+  // Get mood and select appropriate conversation      
+  const mood = getMood();      
+  const moodConvos = conversations[mood] || conversations.neutral;      
+        
+  // Pick a random conversation from this mood      
+  currentConversation = moodConvos[Math.floor(Math.random() * moodConvos.length)];      
+        
+  // Display Garret's greeting      
+  const garretText = typeof currentConversation.garret === 'function'       
+    ? currentConversation.garret()       
+    : currentConversation.garret.replace('${()=>username}', username);      
+        
+  addGarretBubble(garretText);      
+        
+  // Display answer options as bubbles      
+  currentConversation.answers.forEach(answer => {      
+    const answerDiv = document.createElement('div');      
+    answerDiv.className = 'answerBubble';      
+    answerDiv.textContent = answer.text;      
+          
+    answerDiv.onclick = () => {      
+      // Add user's answer as a bubble      
+      addUserBubble(answer.text);      
+            
+      // Apply effects      
+      applyEffects(answer.effects);      
+            
+      // Clear answer options      
+      chatAnswers.innerHTML = '';      
+            
+      // Garret responds after a short delay      
+      setTimeout(() => {      
+        const reply = answer.replies[Math.floor(Math.random() * answer.replies.length)];      
+        addGarretBubble(reply);      
+              
+        // After reply, load a new conversation      
+        setTimeout(() => {      
+          initChat();      
+        }, 1500);      
+      }, 800);      
+    };      
+          
+    chatAnswers.appendChild(answerDiv);      
+  });      
+        
+  // Update sprite based on mood      
+  updateSprite();      
+}      
+      
+/* ====== FOOD ====== */      
+const foods=[      
+  {emoji:'🍎',label:'Apple',hunger:8,happiness:2,cost:5},      
+  {emoji:'🍔',label:'Burger',hunger:20,happiness:5,cost:15},      
+  {emoji:'🍩',label:'Donut',hunger:6,happiness:8,cost:12},      
+  {emoji:'🍫',label:'Chocolate',hunger:4,happiness:10,cost:18},      
+  {emoji:'🥗',label:'Salad',hunger:10,happiness:3,cost:8}  ,    
+{emoji:'🌽',label:'Corn',hunger:2,happiness:6,cost:4}      ,
+{emoji:'🌯',label:'Shawarma',hunger:23,happiness:7,cost:10}      ,
+{emoji:'🎂',label:'Cake',hunger:9,happiness:10,cost:12,}      ,
+{emoji:'🍟',label:'French Fries',hunger:2,happiness:5,cost:3,}      ,
+  {emoji:'🥦',label:'Brocoli',hunger:3,happiness:-2,cost:2,}      ,
+  {emoji:'🍳',label:'Fried Egg',hunger:4,happiness:4,cost:3,}      ,
+  {emoji:'🧪',label:'Hunger Potion',hunger:-50,happiness:0,cost:100}     , 
+
+  ];      
+      
+function renderFood(){      
+  foodGrid.innerHTML='';      
+  foods.forEach(f=>{      
+    const card=document.createElement('div');      
+    card.className='foodCard';      
+          
+card.innerHTML=`<div class="foodEmoji">${f.emoji}</div>      
+                    <div class="foodLabel">${f.label}</div>      
+                    <div class="price">$${f.cost}</div>`;      
+    card.onclick=()=>{      
+      if(petData.money<f.cost){ alert("Not enough money!"); return; }      
+      petData.money-=f.cost;      
+      petData.hunger=clamp(petData.hunger+f.hunger);      
+      petData.happiness=clamp(petData.happiness+f.happiness);      
+      save(); applyHUD();      
+      dialogue.innerText = `Garret: Yum! I ate ${f.label}!`;      
+    };      
+    foodGrid.appendChild(card);      
+  });      
+}      
+      
+/* ====== SLEEP ====== */      
+document.getElementById('startSleep').addEventListener('click',()=>{      
+  if(petData.rest>=100){ alert("Garret is already rested."); return; }      
+  petData.sleeping=true;      
+  dialogue.innerText = "Garret: Zzz... Sleeping.";      
+  applyHUD();      
+  save();      
+});      
+      
+/* ====== RESET ====== */      
+document.getElementById('resetBtn').addEventListener('click',()=>{      
+  if(confirm('Reset pet?')){       
+    localStorage.removeItem(STORAGE);       
+    localStorage.removeItem('pet_username');       
+    location.reload();       
+  }      
+});      
+      
+/* ====== AUTO-DECREASE/INCREASE STATS ====== */      
+// Hunger decreases by 1% every 30 seconds      
+setInterval(()=>{      
+  if(!petData.sleeping){      
+    petData.hunger = clamp(petData.hunger - 1);      
+    applyHUD();       
+    save();      
+  }      
+}, 30000);      
+      
+// Rest decreases by 1% every 60 seconds (1 minute)      
+setInterval(()=>{      
+  if(!petData.sleeping){      
+    petData.rest = clamp(petData.rest - 1);      
+    applyHUD();       
+    save();      
+  }      
+}, 60000);      
+      
+// Happiness decreases slowly      
+setInterval(()=>{      
+  if(!petData.sleeping){      
+    petData.happiness = clamp(petData.happiness - 1);      
+    applyHUD();       
+    save();      
+  }      
+}, 45000);      
+      
+// When sleeping, rest increases by 2% every 30 seconds      
+setInterval(()=>{      
+  if(petData.sleeping){      
+    petData.rest = clamp(petData.rest + 1);      
+    if(petData.rest >= 100){       
+      petData.sleeping = false;       
+      dialogue.innerText = "Garret: I'm fully rested!";      
+    }      
+    applyHUD();       
+    save();      
+  }      
+}, 3000);      
+      
+/* ====== GAME BUTTONS ====== */      
+document.getElementById('openSubway')?.addEventListener('click', () => {      
+  window.open('games/wordle/index.html', '_blank');      
+});      
+document.getElementById('openGeo')?.addEventListener('click', () => {      
+  window.open('games/clicker/index.html', '_blank');      
+});      
+document.getElementById('openFlappy')?.addEventListener('click', () => {      
+  window.open('games/flappy/index.html', '_blank');      
+});      
+      
+/* ====== INIT ====== */      
+requireUsername();      
+applyHUD();      
+</script>      
+</body>      
+</html>
